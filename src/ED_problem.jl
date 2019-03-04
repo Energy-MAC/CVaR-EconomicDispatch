@@ -1,11 +1,24 @@
 function solve_ed(sys, optimizer)
-    Net = PS.CopperPlatePowerModel
-    m = Model(optimizer);
-    netinjection = PS.instantiate_network(Net, sys);
-    PS.constructdevice!(m, netinjection, ThermalGen, PS.ThermalDispatch, Net, sys)
-    PS.constructdevice!(m, netinjection, RenewableGen, PS.RenewableCurtail, Net, sys)
-    PS.constructnetwork!(m, [(device=Line, formulation=PS.PiLine)], netinjection, Net, sys)
-    @objective(m, Min, m.obj_dict[:objective_function])
-    JuMP.optimize!(m)
-    return get_model_result(m)
+    PTDF, A = PowerSystems.buildptdf(sys.branches, sys.buses)
+    
+    ps_model = PSI.CanonicalModel(Model(optimizer),
+                                  Dict{String, JuMP.Containers.DenseAxisArray{JuMP.VariableRef}}(),
+                                  Dict{String, JuMP.Containers.DenseAxisArray}(),
+                                  nothing,
+                                  Dict{String, 
+                                  PSI.JumpAffineExpressionArray}("var_active" => PSI.JumpAffineExpressionArray(undef, length(sys.buses), sys.time_periods)),
+                                  Dict{String,Any}(),
+                                  nothing);
+    
+    PSI.construct_device!(ps_model, PSY.ThermalGen, PSI.ThermalDispatch, PSI.CopperPlatePowerModel, sys);
+    PSI.construct_device!(ps_model, PSY.RenewableCurtailment, PSI.PSI.RenewableFullDispatch, PSI.CopperPlatePowerModel, sys);
+    PSI.construct_device!(ps_model, PSY.PowerLoad, PSI.StaticPowerLoad, PSI.CopperPlatePowerModel, sys);
+    PSI.constructnetwork!(ps_model,PSI.CopperPlatePowerModel, sys; PTDF = PTDF)
+        
+    JuMP.@objective(ps_model.JuMPmodel, Min, ps_model.cost_function)
+        
+    JuMP.optimize!(ps_model.JuMPmodel)
+        
+    return get_model_result(ps_model), ps_model
+        
 end
