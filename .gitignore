@@ -1,3 +1,4 @@
+*.csv
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
