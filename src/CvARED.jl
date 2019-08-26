@@ -13,8 +13,6 @@ using Logging
 using TimeSeries
 using MathOptInterface
 
-const MOI = MathOptInterface
-
 #gl = global_logger()
 #global_logger(ConsoleLogger(gl.stream, LogLevel(Logging.Debug)))
 
@@ -25,5 +23,4 @@ OSQP_optimizer = JuMP.with_optimizer(OSQP.Optimizer)
 
 const PSI = PowerSimulations
 const PSY = PowerSystems
-
-include("cvar_network.jl")
+const MOI = MathOptInterface
